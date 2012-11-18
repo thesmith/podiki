@@ -55,6 +55,7 @@ import edu.cmu.sphinx.util.props.ConfigurationManagerUtils
 import edu.cmu.sphinx.linguist.language.ngram.large.LargeNGramModel
 import edu.cmu.sphinx.linguist.language.ngram.BackoffLanguageModel
 import edu.cmu.sphinx.linguist.lextree.LexTreeLinguist
+import edu.cmu.sphinx.linguist.language.ngram.SimpleNGramModel
 
 class SphinxConf {
   val logMath = new LogMath(1.0001f, true)
@@ -126,29 +127,49 @@ class SphinxConf {
   
   val unitManager = new UnitManager()
 
-  val modelLoader = new Sphinx3Loader("resource:/edu/cmu/sphinx/model/acoustic/HUB4_8gau_13dCep_16k_40mel_133Hz_6855Hz",
-                                      "hub4opensrc.6000.mdef", "6000senones/hub4opensrc.cd_continuous_8gau/", logMath, unitManager, 0.0f, 1e-7f, 0.0001f, true)
+//  val modelLoader = new Sphinx3Loader("resource:/edu/cmu/sphinx/model/acoustic/HUB4_8gau_13dCep_16k_40mel_133Hz_6855Hz",
+//                                      "hub4opensrc.6000.mdef", "6000senones/hub4opensrc.cd_continuous_8gau/", logMath, unitManager, 0.0f, 1e-7f, 0.0001f, true)
+  val modelLoader = new Sphinx3Loader("resource:/WSJ_8gau_13dCep_16k_40mel_130Hz_6800Hz",
+                                      "mdef", "", logMath, unitManager, 0.0f, 1e-7f, 0.0001f, true)
 
   val model = new TiedStateAcousticModel(modelLoader, unitManager, true)
 
-  val dictionary = new FastDictionary("resource:/edu/cmu/sphinx/model/acoustic/HUB4_8gau_13dCep_16k_40mel_133Hz_6855Hz/cmudict.06d",
-                                      "resource:/edu/cmu/sphinx/model/acoustic/HUB4_8gau_13dCep_16k_40mel_133Hz_6855Hz/fillerdict",
-                                      Seq[URL](), false, "<sil>", false, false, unitManager)
+//  val dictionary = new FastDictionary("resource:/edu/cmu/sphinx/model/acoustic/HUB4_8gau_13dCep_16k_40mel_133Hz_6855Hz/cmudict.06d",
+//                                      "resource:/edu/cmu/sphinx/model/acoustic/HUB4_8gau_13dCep_16k_40mel_133Hz_6855Hz/fillerdict",
+//                                      Seq[URL](), false, "<sil>", false, false, unitManager)
   
-  val languageModel = new LargeNGramModel(
-    "DMP",
-    ConfigurationManagerUtils.resourceToURL("src/main/resources/language_model.arpaformat.DMP"),
-    null, // ngramLogFile
-    100000, //cacheSize
-    false,
-    -1,
-    logMath,
-    dictionary,
-    false,
-    1.0f,
-    1.0f,
-    1.0f,
-    false
+  val dictionary = new FastDictionary(
+                "resource:/WSJ_8gau_13dCep_16k_40mel_130Hz_6800Hz/dict/cmudict.0.6d",
+                "resource:/WSJ_8gau_13dCep_16k_40mel_130Hz_6800Hz/noisedict",
+                Seq[URL](),
+                false,
+                "<sil>",
+                false,
+                false,
+                unitManager)
+  
+//  val languageModel = new LargeNGramModel(
+//    "DMP",
+//    ConfigurationManagerUtils.resourceToURL("src/main/resources/language_model.arpaformat.DMP"),
+//    null, // ngramLogFile
+//    100000, //cacheSize
+//    false,
+//    -1,
+//    logMath,
+//    dictionary,
+//    false,
+//    1.0f,
+//    1.0f,
+//    1.0f,
+//    false
+//  )
+  
+  val languageModel = new SimpleNGramModel(
+    "src/main/resources/hellongram.trigram.lm",
+    dictionary, // dictionary
+    0.7f, // unigramWeight,
+    logMath, // logMath,
+    3 // desiredMaxDepth,
   )
 
   val linguist = new LexTreeLinguist(

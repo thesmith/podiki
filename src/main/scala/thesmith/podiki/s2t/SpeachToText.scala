@@ -14,12 +14,13 @@ import javax.sound.sampled.AudioFileFormat
 import org.slf4j.LoggerFactory
 import javazoom.jl.converter.Converter
 
-class SpeachToText(config: SphinxConf) {
+class SpeachToText {
   val logger = LoggerFactory.getLogger(this.getClass)
   val targetFormat = new AudioFormat(16000f, 16, 1, true, true);
     val converter = new Converter()
   
   def toText(sourcePath: String): Seq[String] = {
+    val config = new SphinxConf()
     val tempPath = "/tmp/"+System.currentTimeMillis+".wav"
     converter.convert(sourcePath, tempPath)
     logger.info("Converted "+sourcePath+" to "+tempPath)

@@ -34,6 +34,13 @@ class PodcastCrawler(redis: Redis, podcast: Podcast, echoPrint: EchoPrint, spear
         val episodes = podcast.mp3s(url)
         logger.info(url+" returned "+episodes.size+" episodes")
         
+        redis.exec(pipeline => {
+          episodes.foreach(episode => {
+            pipeline.zadd("playlist_episodes:"+url, episode.published.getMillis, episode.url)
+            pipeline.hmset("episode:"+episode.url, episode.toMap)
+          })
+        })
+        
         episodes.foreach(episode => {
           val tracksF = future { echoPrint.tracks(episode.mp3Path) }
           val linesF = future { spearchToText.toText(episode.mp3Path) }
@@ -42,8 +49,6 @@ class PodcastCrawler(redis: Redis, podcast: Podcast, echoPrint: EchoPrint, spear
           
           logger.info(episode+" returned "+tracks.size+" episodes")
           redis.exec(pipeline => {
-            pipeline.zadd("playlist_episodes:"+url, episode.published.getMillis, episode.url)
-            pipeline.hmset("episode:"+episode.url, episode.toMap)
             tracks.foreach(track => {
               pipeline.zadd("episode_tracks:"+episode.url, track.position, track.artist+" - "+track.track)
             })

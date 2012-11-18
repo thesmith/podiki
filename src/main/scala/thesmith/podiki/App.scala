@@ -17,7 +17,7 @@ object App extends scala.App {
   val redis = new SingleRedis("localhost", 6379, Some("onerecruit"))
   val echoPrint = new EchoPrint("/Users/bens/projects/echoprint-codegen/echoprint-codegen", urlFetcher)
   val podcast = new Podcast("/tmp", urlFetcher)
-  val speachToText = new SpeachToText(new SphinxConf())
+  val speachToText = new SpeachToText()
   redis.zadd("podcast_urls", 1, "http://marenco.libsyn.com/rss")
   
   val podcastCrawler = new PodcastCrawler(redis, podcast, echoPrint, speachToText)
