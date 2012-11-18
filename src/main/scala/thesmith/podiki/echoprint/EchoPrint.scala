@@ -31,45 +31,45 @@ import net.liftweb.json.Extraction.decompose
 import net.liftweb.json.JsonAST.render
 import net.liftweb.json.Printer.compact
 import thesmith.podiki.http.UrlFetcher
+import thesmith.podiki.SongListener
+import thesmith.podiki.podcast.Episode
 
-class EchoPrint(location: String, urlFetcher: UrlFetcher) {
+class EchoPrint(location: String, urlFetcher: UrlFetcher, songListener: SongListener) {
   val logger = LoggerFactory.getLogger(this.getClass)
   implicit val formats = net.liftweb.json.DefaultFormats
   val url = "http://developer.echonest.com/api/v4/song/identify?api_key=AFB4HZSDSRBTJGC5Q"
   
-  def tracks(path: String): Seq[Song] = {
-     val tasks = segments(length(path)).map(segment => {
-      future {
-        try {
-          val cmd = location+" "+path+" "+segment._1+" "+segment._2
-          logger.info(cmd)
-          val result = cmd.!!
-          val json = JsonParser.parse(result)
-          Option(compact(render(decompose((json.extract[List[JValue]].head))))).flatMap(code => {
-            JsonParser.parse(code).\("code").extractOpt[String].flatMap(c=> {
-              val response = urlFetcher.post(url, "query="+URLEncoder.encode(code, "UTF-8"), Map("Content-Type" -> "application/x-www-form-urlencoded"))
-              response.content
+  def tracks(episode: Episode): Seq[Song] = {
+    var position = 0
+    segments(length(episode.mp3Path)).flatMap(segment => {
+      try {
+        val cmd = location+" "+episode.mp3Path+" "+segment._1+" "+segment._2
+        logger.info(cmd)
+        val result = cmd.!!
+        val json = JsonParser.parse(result)
+        Option(compact(render(decompose((json.extract[List[JValue]].head))))).flatMap(code => {
+          JsonParser.parse(code).\("code").extractOpt[String].flatMap(c=> {
+            val response = urlFetcher.post(url, "query="+URLEncoder.encode(code, "UTF-8"), Map("Content-Type" -> "application/x-www-form-urlencoded"))
+            response.content.flatMap(content => {
+              val json = JsonParser.parse(content)
+              (json \ "response" \ "songs").extractOpt[List[JValue]].getOrElse(List()).headOption.map(track => {
+                position = position + 1
+                val artist = (track \ "artist_name").extract[String]
+                val name = (track \ "title").extract[String]
+                val song = Song(artist, name, position)
+                songListener.song(episode, song)
+                song
+              })
             })
           })
-        } catch {
-          case e => {
-            e.printStackTrace
-            None
-          }
+        })
+      } catch {
+        case e => {
+          e.printStackTrace
+          None
         }
       }
     })
-    
-    val results = awaitAll(1000000L, tasks: _*).flatten
-    logger.info(results.mkString("\n"))
-    results.map(_.asInstanceOf[Option[String]]).flatten.map(result => {
-      val json = JsonParser.parse(result)
-      (json \ "response" \ "songs").extractOpt[List[JValue]].getOrElse(List()).headOption.map(song => {
-        val artist = (song \ "artist_name").extract[String]
-        val track = (song \ "title").extract[String]
-        Song(artist, track, 0)
-      })
-    }).flatten.distinct.zipWithIndex.map(r => r._1.withPosition(r._2))
   }
   
   def segments(length: Int): Seq[(Int, Int)] = {

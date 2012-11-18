@@ -15,9 +15,11 @@ object App extends scala.App {
   val logger = LoggerFactory.getLogger("Podiki")
   val urlFetcher = new UrlFetcher(30, 30, 30)
   val redis = new SingleRedis("localhost", 6379, Some("onerecruit"))
-  val echoPrint = new EchoPrint("/Users/bens/projects/echoprint-codegen/echoprint-codegen", urlFetcher)
+  val lineListener = new LineListener(redis)
+  val songListener = new SongListener(redis)
+  val echoPrint = new EchoPrint("/Users/bens/projects/echoprint-codegen/echoprint-codegen", urlFetcher, songListener)
   val podcast = new Podcast("/tmp", urlFetcher)
-  val speachToText = new SpeachToText()
+  val speachToText = new SpeachToText(lineListener)
   redis.zadd("podcast_urls", 1, "http://marenco.libsyn.com/rss")
   
   val podcastCrawler = new PodcastCrawler(redis, podcast, echoPrint, speachToText)

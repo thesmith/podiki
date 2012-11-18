@@ -11,6 +11,7 @@ import org.joda.time.format.DateTimeFormatter
 import org.joda.time.format.ISODateTimeFormat
 import java.io.FileOutputStream
 import org.apache.commons.io.IOUtils
+import java.net.URLEncoder
 
 class Podcast(repo: String, urlFetcher: UrlFetcher) {
   val logger = LoggerFactory.getLogger(this.getClass)
@@ -72,6 +73,7 @@ case class Episode(name: String, published: DateTime, url: String, mp3Path: Stri
         "mp3_path" -> mp3Path,
         "mp3_url" -> mp3Url,
         "thumbnail" -> thumbnail,
-        "published" -> published.getMillis.toString)
+        "published" -> published.getMillis.toString,
+        "id" -> URLEncoder.encode(url, "UTF-8"))
   }
 }

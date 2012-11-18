@@ -13,17 +13,19 @@ import javax.sound.sampled.AudioFormat.Encoding
 import javax.sound.sampled.AudioFileFormat
 import org.slf4j.LoggerFactory
 import javazoom.jl.converter.Converter
+import thesmith.podiki.LineListener
+import thesmith.podiki.podcast.Episode
 
-class SpeachToText {
+class SpeachToText(lineListener: LineListener) {
   val logger = LoggerFactory.getLogger(this.getClass)
   val targetFormat = new AudioFormat(16000f, 16, 1, true, true);
     val converter = new Converter()
   
-  def toText(sourcePath: String): Seq[String] = {
+  def toText(episode: Episode): Seq[String] = {
     val config = new SphinxConf()
     val tempPath = "/tmp/"+System.currentTimeMillis+".wav"
-    converter.convert(sourcePath, tempPath)
-    logger.info("Converted "+sourcePath+" to "+tempPath)
+    converter.convert(episode.mp3Path, tempPath)
+    logger.info("Converted "+episode.mp3Path+" to "+tempPath)
     
     val recognizer = config.recognizer
     recognizer.allocate()
@@ -32,7 +34,7 @@ class SpeachToText {
     @tailrec def recog(lines: Seq[String]): Seq[String] = Option(recognizer.recognize) match {
       case Some(result) => {
         val line = result.getBestFinalResultNoFiller
-        println("+++++ "+line+" - "+result)
+        lineListener.line(episode, line)
         recog(lines :+ line)
       }
       case _ => lines
