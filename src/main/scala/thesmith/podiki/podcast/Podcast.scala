@@ -30,16 +30,28 @@ class Podcast(repo: String, urlFetcher: UrlFetcher) {
     })
     logger.info(mp3s.mkString(", "))
     mp3s.getOrElse(Seq()).flatMap(episode => {
-      val u = new URL(episode.mp3Url)
-      val path = u.getFile.replace("/", "_")
-      logger.info("Getting mp3: "+episode.mp3Url+" and putting it: "+repo+"/"+path)
-      val response = urlFetcher.get(episode.mp3Url, Map(), false)
-      response.contentStream.map(contentStream => {
-        val file = new File(repo+"/"+path)
-        inputToFile(contentStream, file)
-        logger.info("Written: "+file.getAbsolutePath)
-        episode.withMp3Path(file.getAbsolutePath)
-      })
+      try {
+        if (! episode.mp3Url.isEmpty) {
+          val u = new URL(episode.mp3Url)
+          val path = u.getFile.replace("/", "_")
+          val file = new File(repo+"/"+path)
+          if (!file.exists) {
+            logger.info("Getting mp3: "+episode.mp3Url+" and putting it: "+repo+"/"+path)
+            val response = urlFetcher.get(episode.mp3Url, Map(), false)
+            response.contentStream.map(contentStream => {
+              inputToFile(contentStream, file)
+              logger.info("Written: "+file.getAbsolutePath)
+            })
+          }
+          Some(episode.withMp3Path(file.getAbsolutePath))
+        } else None
+      } catch {
+        case e => {
+          logger.error("Problem processing episode: "+episode, e)
+          e.printStackTrace
+          None
+        }
+      }
     })
   }
   

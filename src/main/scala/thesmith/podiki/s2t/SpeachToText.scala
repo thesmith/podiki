@@ -21,7 +21,8 @@ class SpeachToText(config: SphinxConf) {
   
   def toText(sourcePath: String): Seq[String] = {
     val tempPath = "/tmp/"+System.currentTimeMillis+".wav"
-    converter.convert(sourcePath, "/tmp/skeptics_guid.wav")
+    converter.convert(sourcePath, tempPath)
+    logger.info("Converted "+sourcePath+" to "+tempPath)
     
     val recognizer = config.recognizer
     recognizer.allocate()
@@ -30,7 +31,7 @@ class SpeachToText(config: SphinxConf) {
     @tailrec def recog(lines: Seq[String]): Seq[String] = Option(recognizer.recognize) match {
       case Some(result) => {
         val line = result.getBestFinalResultNoFiller
-        println("+++++ "+line)
+        println("+++++ "+line+" - "+result)
         recog(lines :+ line)
       }
       case _ => lines

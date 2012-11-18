@@ -5,8 +5,10 @@ import com.top10.redis.Redis
 import thesmith.podiki.podcast.Podcast
 import thesmith.podiki.echoprint.EchoPrint
 import org.slf4j.LoggerFactory
+import thesmith.podiki.s2t.SpeachToText
+import scala.actors.Futures._
 
-class PodcastCrawler(redis: Redis, podcast: Podcast, echoPrint: EchoPrint) extends Thread {
+class PodcastCrawler(redis: Redis, podcast: Podcast, echoPrint: EchoPrint, spearchToText: SpeachToText) extends Thread {
   val batchSize = 10
   val key = "podcast_urls"
   val logger = LoggerFactory.getLogger(this.getClass)
@@ -33,13 +35,21 @@ class PodcastCrawler(redis: Redis, podcast: Podcast, echoPrint: EchoPrint) exten
         logger.info(url+" returned "+episodes.size+" episodes")
         
         episodes.foreach(episode => {
-          val tracks = echoPrint.tracks(episode.mp3Path)
+          val tracksF = future { echoPrint.tracks(episode.mp3Path) }
+          val linesF = future { spearchToText.toText(episode.mp3Path) }
+          val tracks = tracksF()
+          val lines = linesF()
+          
           logger.info(episode+" returned "+tracks.size+" episodes")
           redis.exec(pipeline => {
             pipeline.zadd("playlist_episodes:"+url, episode.published.getMillis, episode.url)
             pipeline.hmset("episode:"+episode.url, episode.toMap)
             tracks.foreach(track => {
               pipeline.zadd("episode_tracks:"+episode.url, track.position, track.artist+" - "+track.track)
+            })
+            pipeline.del("episode_lines:"+episode.url)
+            lines.foreach(line => {
+              pipeline.lpush("episode_lines:"+episode.url, line)
             })
           })
         })
